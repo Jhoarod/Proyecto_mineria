@@ -10,10 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-
-
-
-
+## Libreria utilizadas
 
 ```{r message=FALSE}
 library(formattable)
@@ -32,6 +29,26 @@ library(fastDummies)
 
 ```
 
+## 1. Introducción 
+
+• Breve presentación del proyecto.
+
+• Contextualización del problema y su relevancia.
+
+
+## 2. Justificación
+
+• Importancia del estudio de datos en el problema abordado.
+
+• Valor agregado del análisis realizado.
+
+## 3. Objetivos
+
+• General: Enunciar el objetivo principal del proyecto.
+
+• Específicos: Al menos tres objetivos que detallen las metas técnicas del análisis.
+
+### 4. Fases del Proceso KDD
 
 ### Importacion de datos 
 ```{r}
@@ -84,31 +101,29 @@ DataSeleccion <- Data %>%
 ### Limpieza de datos y manejo de valores faltante
 El siguiente código elimina filas con valores NA y permite verificar cuántos registros se mantuvieron:
 
+### Eliminación de filas con  NA
+
 ```{r}
-# Eliminación de valores faltantes
-DataLimpia <- na.omit(DataSeleccion)
+# Eliminación de registros (filas) con más del 30% de valores NA
+DataLimpia <- DataSeleccion %>%
+  filter(if_all(everything(), ~ !is.na(.)))
 
-
+# Mostrar cantidad de filas antes y después
 nrow(DataSeleccion)
 nrow(DataLimpia)
 
 ```
 
-
-
-### Eliminación de columnas con más del 30% de NA
-
-```{r}
-DataLimpia <- DataSeleccion %>%
-  filter(if_all(everything(), ~ !is.na(.)))
-```
-
-Motivos de eliminación:
+## Motivos de eliminación:
 
 •segment_id	Identificador único, no aporta información para el análisis.
+
 •city_name, admin_ward, catchment_id	Identificadores geográficos que no reflejan condiciones físicas o hidrológicas.
+
 •latitude, longitude	Variables espaciales que requieren proyección o normalización especial.
+
 •dem_source, rainfall_source	Describen la procedencia de los datos, no influyen directamente en los fenómenos analizados.
+
 •risk_labels	Etiqueta de riesgo, reservada solo para validación, no debe participar en el entrenamiento del modelo.
 
 
@@ -141,20 +156,12 @@ boxplot(DataLimpia$historical_rainfall_intensity_mm_hr, main="Outliers en intens
 
 ```
 
-### dataset limpio
 
-```{r}
-
-glimpse(DataLimpia)
-
-```
-
-
-### Transformación 
+####  4.4 Transformación de Datos.
 
 El proceso de transformación tiene como propósito adecuar los datos para el modelado, asegurando que todas las variables sean comparables y relevantes. Se realizaron las siguientes etapas:
 
-#### Normalización de variables numéricas
+### Normalización de variables numéricas
 
 Las variables numéricas presentan escalas diferentes (metros, milímetros, años).
 Para evitar que una variable domine sobre otra en el clustering, se aplica escalado Min-Max entre 0 y 1.
@@ -190,13 +197,13 @@ DataTransform <- fastDummies::dummy_cols(DataTransform,
 
 ```
 
-#### Justificación:
+## Justificación:
 
-Se generan columnas binarias como land_use_urban, soil_group_C, storm_drain_type_open, etc.
+Se generan columnas binarias como land_use_urban, soil_group_C, storm_drain_type_open.
 
 
 
-### Creación de variables derivadas
+### Creación de variables derivadas.
 
 Se crean nuevas variables relevantes para el análisis de riesgo de inundación y agrupamiento de zonas:
 
@@ -210,7 +217,7 @@ DataTransform <- DataTransform %>%
   )
 ```
 
-#### Justificación:
+## Justificación:
 
 elevation_rain_ratio: relación entre altura y lluvia → zonas bajas con alta lluvia = mayor riesgo.
 
@@ -219,7 +226,7 @@ drainage_rain_index: mide la capacidad de drenaje ante lluvias intensas.
 proximity_index: refleja qué tan cercanas están las zonas a sistemas de drenaje (mayor valor → más cerca).
 
 
-### Comparación antes y después
+### Comparación antes y después.
 
 ```{r AntesDespues}
 head(DataLimpia %>% select(elevation_m, drainage_density_km_per_km2))
@@ -251,7 +258,7 @@ data_cluster <- data_cluster %>%
 data_scaled <- scale(data_cluster)
 ```
 
-### . Clustering (K-Means) + Validación
+###  Clustering (K-Means) + Validación
 ```{r}
 # 2.1 Determinar número óptimo de clusters con el método del codo
 fviz_nbclust(data_scaled, kmeans, method = "wss")
@@ -278,7 +285,6 @@ La distribución compacta de cada clúster refuerza la consistencia del modelo y
 
 ### 3. Convertir Clustering en Etiquetas de Riesgo  
 ```{r}
-# Asignamos nombres a los clusters según el promedio de inundacion
 
 # Crear una columna final de riesgo (Bajo, Medio, Alto)
 DataLimpia$risk_level <- recode(DataLimpia$cluster_risk,
@@ -310,3 +316,37 @@ Las áreas con menor elevación y mayor intensidad de lluvia histórica presenta
 El clúster de riesgo Medio se ubica en una zona intermedia tanto en elevación como en precipitación.
 
 El clúster de riesgo Bajo se encuentra mayormente distribuido en zonas con elevaciones más altas y menor intensidad de lluvia, lo cual sugiere condiciones más seguras frente a posibles inundaciones.
+
+
+
+
+
+## 4.5 Minería de Datos
+• Seleccionar y justificar el algoritmo o técnica empleada (clasificación, regresión, clustering, etc.).
+
+• Describir la división de datos (entrenamiento y prueba).
+
+• Presentar las métricas de evaluación (Accuracy, F1-Score, MAE, etc.).
+
+• Incluir visualizaciones que respalden los resultados del modelo.
+
+
+## 4.6 Interpretación y Evaluación
+
+• Analizar críticamente los resultados obtenidos.
+
+• Validar el conocimiento descubierto frente a las hipótesis y objetivos planteados.
+
+• Evaluar el valor del conocimiento extraído para el contexto del problema.
+
+## 5. Conclusiones
+
+• Sintetizar los principales hallazgos.
+
+• Reflexionar sobre el proceso completo y sus limitaciones.
+
+• Proponer posibles trabajos futuros o mejoras.
+
+## 6. Anexos
+
+• Gráficos, tablas, fragmentos de código, resultados adicionales que complementen el análisis.

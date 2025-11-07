@@ -1,0 +1,2 @@
+"0","DataLimpia <- DataSeleccion %>%"
+"0","  filter(if_all(everything(), ~ !is.na(.)))"

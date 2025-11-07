@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
+
 ```{r message=FALSE}
 library(formattable)
 library(dplyr)
@@ -27,6 +28,7 @@ library(cluster)
 library(factoextra)
 library(caret)
 library(randomForest)
+library(fastDummies)
 
 ```
 
@@ -62,15 +64,21 @@ DataSeleccion <- Data %>%
 
 •elevation_m: La altitud define la capacidad de escurrimiento del agua.
 
+
 •drainage_density_km_per_km2: Representa la eficiencia de drenaje urbano.
+
 
 •storm_drain_proximity_m: Influye directamente en la probabilidad de acumulación de agua.
 
+
 •historical_rainfall_intensity_mm_hr: Determina la presión pluvial histórica en la zona.
+
 
 •return_period_years: Indica la frecuencia esperada de eventos extremos.
 
+
 •land_use, soil_group, storm_drain_type: Variables categóricas que afectan la infiltración, escorrentía y drenaje.
+
 
 
 ### Limpieza de datos y manejo de valores faltante
@@ -119,11 +127,17 @@ DataLimpia<- DataLimpia %>%
 El resultado es que no existen registros duplicados en el dataset.
 
 
+
 ### Outliers
 Los valores atípicos se detectaron mediante el método de boxplot y z-score, verificando columnas numéricas como elevation_m o rainfall_intensity.
 
 ```{r}
-M
+# Detección de outliers por Z-score
+z_scores <- scale(DataLimpia[, sapply(DataLimpia, is.numeric)])
+outliers <- which(abs(z_scores) > 3, arr.ind = TRUE)
+
+# Visualización de posibles outliers
+boxplot(DataLimpia$historical_rainfall_intensity_mm_hr, main="Outliers en intensidad de lluvia")
 
 ```
 
@@ -132,6 +146,84 @@ M
 ```{r}
 
 glimpse(DataLimpia)
+
+```
+
+
+### Transformación 
+
+El proceso de transformación tiene como propósito adecuar los datos para el modelado, asegurando que todas las variables sean comparables y relevantes. Se realizaron las siguientes etapas:
+
+#### Normalización de variables numéricas
+
+Las variables numéricas presentan escalas diferentes (metros, milímetros, años).
+Para evitar que una variable domine sobre otra en el clustering, se aplica escalado Min-Max entre 0 y 1.
+
+```{r normalizacion}
+
+DataTransform <- DataLimpia %>%
+  mutate(across(c(elevation_m,
+                  drainage_density_km_per_km2,
+                  storm_drain_proximity_m,
+                  historical_rainfall_intensity_mm_hr,
+                  return_period_years),
+                ~ (.-min(.)) / (max(.)-min(.)),
+                .names = "norm_{col}"))
+
+```
+
+Esto genera nuevas columnas como:
+norm_elevation_m, norm_drainage_density_km_per_km2, etc.
+
+
+
+### Codificación de variables categóricas
+
+Las variables categóricas land_use, soil_group y storm_drain_type se transforman a variables numéricas mediante one-hot encoding, técnica válida y común en minería de datos porque no impone orden artificial entre categorías.
+
+```{r codificacionVariables}
+
+DataTransform <- fastDummies::dummy_cols(DataTransform,
+                                         select_columns = c("land_use", "soil_group", "storm_drain_type"),
+                                         remove_first_dummy = TRUE,
+                                         remove_selected_columns = TRUE)
+
+```
+
+#### Justificación:
+
+Se generan columnas binarias como land_use_urban, soil_group_C, storm_drain_type_open, etc.
+
+
+
+### Creación de variables derivadas
+
+Se crean nuevas variables relevantes para el análisis de riesgo de inundación y agrupamiento de zonas:
+
+```{r creacionVariables}
+
+DataTransform <- DataTransform %>%
+  mutate(
+    elevation_rain_ratio = norm_elevation_m / (norm_historical_rainfall_intensity_mm_hr + 0.001),
+    drainage_rain_index = norm_drainage_density_km_per_km2 * norm_historical_rainfall_intensity_mm_hr,
+    proximity_index = 1 / (norm_storm_drain_proximity_m + 0.01)
+  )
+```
+
+#### Justificación:
+
+elevation_rain_ratio: relación entre altura y lluvia → zonas bajas con alta lluvia = mayor riesgo.
+
+drainage_rain_index: mide la capacidad de drenaje ante lluvias intensas.
+
+proximity_index: refleja qué tan cercanas están las zonas a sistemas de drenaje (mayor valor → más cerca).
+
+
+### Comparación antes y después
+
+```{r AntesDespues}
+head(DataLimpia %>% select(elevation_m, drainage_density_km_per_km2))
+head(DataTransform %>% select(norm_elevation_m, norm_drainage_density_km_per_km2, elevation_rain_ratio))
 
 ```
 
@@ -218,5 +310,3 @@ Las áreas con menor elevación y mayor intensidad de lluvia histórica presenta
 El clúster de riesgo Medio se ubica en una zona intermedia tanto en elevación como en precipitación.
 
 El clúster de riesgo Bajo se encuentra mayormente distribuido en zonas con elevaciones más altas y menor intensidad de lluvia, lo cual sugiere condiciones más seguras frente a posibles inundaciones.
-
-

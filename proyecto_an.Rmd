@@ -26,6 +26,7 @@ library(factoextra)
 library(caret)
 library(randomForest)
 library(fastDummies)
+library(DescTools)
 
 ```
 
@@ -48,7 +49,16 @@ library(fastDummies)
 
 • Específicos: Al menos tres objetivos que detallen las metas técnicas del análisis.
 
-### 4. Fases del Proceso KDD
+### 4. Fases del Proceso KDD.
+
+### 4.1 Dominio del problema
+• Describir el contexto del fenómeno o situación a analizar.
+
+• Formular preguntas de investigación o hipótesis que orienten la minería de datos.
+
+• Identificar la relevancia del problema y su impacto en la toma de decisiones.
+
+### 4.2 Selección de Datos
 
 ### Importacion de datos 
 ```{r}
@@ -116,25 +126,26 @@ nrow(DataLimpia)
 
 ## Motivos de eliminación:
 
-•segment_id	Identificador único, no aporta información para el análisis.
+•segment_id:	Identificador único, no aporta información para el análisis.
 
-•city_name, admin_ward, catchment_id	Identificadores geográficos que no reflejan condiciones físicas o hidrológicas.
+•city_name, admin_ward, catchment_id:	Identificadores geográficos que no reflejan condiciones físicas o hidrológicas.
 
-•latitude, longitude	Variables espaciales que requieren proyección o normalización especial.
+•latitude, longitude:	Variables espaciales que requieren proyección o normalización especial.
 
-•dem_source, rainfall_source	Describen la procedencia de los datos, no influyen directamente en los fenómenos analizados.
+•dem_source, rainfall_source:	Describen la procedencia de los datos, no influyen directamente en los fenómenos analizados.
 
-•risk_labels	Etiqueta de riesgo, reservada solo para validación, no debe participar en el entrenamiento del modelo.
+•risk_labels:	Etiqueta de riesgo, reservada solo para validación, no debe participar en el entrenamiento del modelo.
 
 
 
+#### 4.3 Limpieza de Datos
 
 
 ### Errores e inconsistencias
 
-Se revisó la existencia de valores duplicados o inconsistencias tipográficas en campos categóricos (como soil_group o land_use).
+Se revisó la existencia de valores duplicados o inconsistencias tipográficas en campos categóricos.
 ```{r}
-# Eliminación de duplicados
+
 DataLimpia<- DataLimpia %>%
   distinct()
 
@@ -144,8 +155,10 @@ El resultado es que no existen registros duplicados en el dataset.
 
 
 ### Outliers
-Los valores atípicos se detectaron mediante el método de boxplot y z-score, verificando columnas numéricas como elevation_m o rainfall_intensity.
+Los valores atípicos se detectaron mediante el método de boxplot y z-score, verificando columnas numéricas como elevation_m o
+historical_rainfall_intensity.
 
+## Outliers historical_rainfall_intensity_mm_hr
 ```{r}
 # Detección de outliers por Z-score
 z_scores <- scale(DataLimpia[, sapply(DataLimpia, is.numeric)])
@@ -156,6 +169,67 @@ boxplot(DataLimpia$historical_rainfall_intensity_mm_hr, main="Outliers en intens
 
 ```
 
+## Outliers storm_drain_proximity_m
+```{r}
+boxplot(DataLimpia$storm_drain_proximity_m,
+        main = "Boxplot de Distancia a Drenaje (storm_drain_proximity_m)")
+
+```
+
+```{r}
+
+```
+
+
+se detectaron valores inconsistentes en la variable elevation_m, particularmente elevaciones negativas, las cuales no son físicamente válidas. Por ello, se eliminaron los registros correspondientes
+
+```{r}
+#  Eliminar elevaciones negativas
+DataLimpia <- DataLimpia[DataLimpia$elevation_m >= 0, ]
+```
+
+Posteriormente, para evitar la distorsión que generan valores extremos en la variable historical_rainfall_intensity_mm_hr, se aplicó el método de Winsorización, ajustando los valores al percentil 1% y 99%.
+
+```{r}
+
+#winsorización en la columna de lluvia histórica en una variable nueva rainfall_winsorizada
+DataLimpia$rainfall_winsorizada <- DescTools::Winsorize(
+  DataLimpia$historical_rainfall_intensity_mm_hr,
+  val = quantile(
+    DataLimpia$historical_rainfall_intensity_mm_hr,
+    probs = c(0.01, 0.99),
+    na.rm = TRUE
+  )
+)
+
+
+```
+
+
+```{r}
+#winsorización en la columna de lluvia histórica en una variable nueva  rainfall_winsorizada
+DataLimpia$storm_drain_proximity_winsorizada <- DescTools::Winsorize(
+  DataLimpia$storm_drain_proximity_m,
+  val = quantile(
+    DataLimpia$storm_drain_proximity_m,
+    probs = c(0.01, 0.99),
+    na.rm = TRUE
+  )
+)
+```
+
+
+
+### tratemiendo de datos:
+• Variables geográficas: (elevation_m, drainage_density_km_per_km2):
+Se mantuvieron sin modificaciones (excepto la corrección de elevaciones negativas), dado que los valores extremos representan fenómenos reales del relieve.
+
+• Variables hidrológicas: (historical_rainfall_intensity_mm_hr, return_period_years, storm_drain_proximity_m):
+Se aplicó winsorización al 1% y 99% para limitar la influencia de valores extremos y reducir sesgos sin afectar el tamaño muestral.
+
+### Justificación:
+
+El uso de winsorización permite preservar la estructura y variabilidad natural de los datos, evitando la pérdida de información que produciría la eliminación de registros. Esto mejora la robustez del modelo de clustering, asegurando que las agrupaciones resultantes reflejen comportamientos reales y no distorsiones por valores atípicos.
 
 ####  4.4 Transformación de Datos.
 
@@ -166,7 +240,7 @@ El proceso de transformación tiene como propósito adecuar los datos para el mo
 Las variables numéricas presentan escalas diferentes (metros, milímetros, años).
 Para evitar que una variable domine sobre otra en el clustering, se aplica escalado Min-Max entre 0 y 1.
 
-```{r normalizacion}
+```{r }
 
 DataTransform <- DataLimpia %>%
   mutate(across(c(elevation_m,
@@ -188,7 +262,7 @@ norm_elevation_m, norm_drainage_density_km_per_km2, etc.
 
 Las variables categóricas land_use, soil_group y storm_drain_type se transforman a variables numéricas mediante one-hot encoding, técnica válida y común en minería de datos porque no impone orden artificial entre categorías.
 
-```{r codificacionVariables}
+```{r }
 
 DataTransform <- fastDummies::dummy_cols(DataTransform,
                                          select_columns = c("land_use", "soil_group", "storm_drain_type"),
@@ -207,7 +281,7 @@ Se generan columnas binarias como land_use_urban, soil_group_C, storm_drain_type
 
 Se crean nuevas variables relevantes para el análisis de riesgo de inundación y agrupamiento de zonas:
 
-```{r creacionVariables}
+```{r }
 
 DataTransform <- DataTransform %>%
   mutate(
@@ -219,16 +293,16 @@ DataTransform <- DataTransform %>%
 
 ## Justificación:
 
-elevation_rain_ratio: relación entre altura y lluvia → zonas bajas con alta lluvia = mayor riesgo.
+•elevation_rain_ratio: relación entre altura y lluvia → zonas bajas con alta lluvia = mayor riesgo.
 
-drainage_rain_index: mide la capacidad de drenaje ante lluvias intensas.
+•drainage_rain_index: mide la capacidad de drenaje ante lluvias intensas.
 
-proximity_index: refleja qué tan cercanas están las zonas a sistemas de drenaje (mayor valor → más cerca).
+•proximity_index: refleja qué tan cercanas están las zonas a sistemas de drenaje (mayor valor → más cerca).
 
 
 ### Comparación antes y después.
 
-```{r AntesDespues}
+```{r }
 head(DataLimpia %>% select(elevation_m, drainage_density_km_per_km2))
 head(DataTransform %>% select(norm_elevation_m, norm_drainage_density_km_per_km2, elevation_rain_ratio))
 

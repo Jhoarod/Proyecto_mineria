@@ -366,6 +366,12 @@ head(DataTransform %>% select(norm_elevation_m, norm_drainage_density_km_per_km2
 
 ```
 
+#### Interpretación de la comparación antes y después
+
+Tras la normalización, las variables numéricas quedaron en una escala común (0–1), evitando que diferencias de magnitud afecten el agrupamiento.
+Por ejemplo, elevation_m = 30.88 pasó a norm_elevation_m = 0.1157, y drainage_density_km_per_km2 = 11.00 a 0.9000.
+Esto permite una comparación equilibrada entre atributos y mejora la coherencia del modelo de clustering.
+
 ---
 
 ### Clustering (para segmentar zonas por riesgo.

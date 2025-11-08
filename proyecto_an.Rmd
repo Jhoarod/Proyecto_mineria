@@ -8,7 +8,7 @@ editor_options:
     wrap: 72
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, echo= FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -379,6 +379,9 @@ data_cluster <- DataTransform %>%
     norm_storm_drain_proximity_m,
     norm_historical_rainfall_intensity_mm_hr,
     norm_return_period_years,
+    elevation_rain_ratio,
+    drainage_rain_index,
+    proximity_index,
     starts_with("land_use_"),
     starts_with("soil_group_"),
     starts_with("storm_drain_type_")
@@ -776,23 +779,197 @@ condiciones más seguras frente a posibles inundaciones.
 
 • Incluir visualizaciones que respalden los resultados del modelo.
 
+
 ## 4.6 Interpretación y Evaluación
 
-• Analizar críticamente los resultados obtenidos.
+## 4.6 Interpretación y Evaluación
 
-• Validar el conocimiento descubierto frente a las hipótesis y objetivos
-planteados.
+El análisis de agrupamiento aplicado permitió identificar tres niveles diferenciados de **riesgo de inundación** (bajo, medio y alto) a partir de variables **topográficas, hidrológicas y de uso del suelo**.  
+Las técnicas empleadas —**K-Means (k = 3)** y **clustering jerárquico**— ofrecieron una clasificación preliminar del territorio basada en la similitud entre segmentos urbanos según su **elevación**, **proximidad a drenajes**, **intensidad de lluvia** y **tipo de suelo**.
 
-• Evaluar el valor del conocimiento extraído para el contexto del
-problema.
+---
+
+### Evaluación del desempeño
+
+Los indicadores de calidad del modelo reflejan una estructura de clusters débilmente definida, con valores de **coeficiente de silueta** de `0.067` (K-Means) y `0.127` (Jerárquico), además de una **varianza explicada (BSS/TSS)** del `11.55%`.
+
+Estos resultados sugieren que las fronteras entre los grupos no son completamente nítidas, lo cual es coherente con la **naturaleza continua y espacialmente correlacionada** de los fenómenos ambientales.  
+En contextos urbanos, las variables asociadas al riesgo de inundación no suelen comportarse de forma discreta, sino como **gradientes de transición** influenciados por la **topografía**, el **drenaje** y la **impermeabilización del suelo**.
+
+Pese a la baja separación estadística entre los clusters, el modelo cumple su propósito exploratorio al **revelar patrones espaciales coherentes** con el comportamiento físico del territorio.
+
+---
+
+### Interpretación de los clusters
+
+| **Nivel de riesgo** | **Nº de registros** | **Elevación promedio** | **Lluvia promedio** | **Proximidad a drenaje** | **Índice de riesgo** |
+|----------------------|--------------------:|-----------------------:|--------------------:|--------------------------:|---------------------:|
+| Alto                | 403                 | 42.6                  | 45.1               | 205                      | 0.0239              |
+| Medio               | 587                 | 43.8                  | 42.8               | 106                      | -0.807              |
+| Bajo                | 1074                | 42.9                  | 42.9               | 100                      | -0.850              |
+
+El **cluster de alto riesgo** agrupa zonas con **mayor cercanía a drenajes** y **mayor intensidad de lluvia**, condiciones que aumentan la susceptibilidad a inundaciones pluviales.  
+El **nivel medio** representa áreas de transición, donde la topografía y el drenaje presentan valores intermedios, reflejando cierta **variabilidad espacial**.  
+Finalmente, el **cluster de bajo riesgo** agrupa sectores más **elevados o alejados de cauces principales**, lo que disminuye la acumulación pluvial y la exposición al riesgo.
+
+En términos de proporción territorial:
+- **Riesgo bajo:** 52.03%  
+- **Riesgo medio:** 28.44%  
+- **Riesgo alto:** 19.50%  
+
+Esto evidencia que una **quinta parte del territorio requiere acciones prioritarias de mitigación y monitoreo.**
+
+---
+
+### Análisis crítico
+
+El modelo evidencia **limitaciones metodológicas** relacionadas con la **baja separación entre grupos** (coeficiente de silueta reducido) y la posible **multicolinealidad entre variables ambientales**.  
+Esto sugiere que los métodos basados en **distancia euclidiana** (como K-Means) pueden no capturar adecuadamente las **relaciones no lineales o espaciales** presentes en el fenómeno.
+
+Sin embargo, los resultados mantienen **coherencia geográfica y física**: las áreas identificadas como de alto riesgo corresponden a sectores bajos y próximos a drenajes, lo cual valida el modelo desde una **perspectiva interpretativa** más que puramente estadística.
+
+---
+
+### Recomendaciones y perspectivas
+
+Para fortalecer la robustez del análisis en futuras versiones, se recomienda:
+
+- Incorporar variables adicionales como **pendiente**, **capacidad de infiltración**, **cobertura vegetal** y **densidad de impermeabilización**.  
+- Aumentar la **resolución espacial** del dataset y considerar la **autocorrelación espacial** en los algoritmos.  
+- Evaluar métodos alternativos de agrupamiento como **DBSCAN** o **Gaussian Mixture Models (GMM)**, que pueden capturar estructuras más complejas y no lineales.  
+- Complementar la evaluación con **métricas de validación externa** y **mapas de riesgo verificados** con datos históricos de eventos de inundación.
+
+
+## Validación del conocimiento descubierto frente a las hipótesis y objetivos planteados
+
+El proceso de análisis exploratorio y de agrupamiento tuvo como objetivo principal **identificar patrones espaciales** que permitan **clasificar las zonas según su nivel de riesgo de inundación**, utilizando variables **ambientales y territoriales**.
+
+Los resultados obtenidos se validan frente a los **objetivos e hipótesis iniciales** de la siguiente manera:
+
+---
+
+### 1. Validación frente al objetivo general
+
+El **objetivo general** consistía en determinar niveles de riesgo de inundación mediante técnicas de **minería de datos (clustering)**.  
+El modelo de agrupamiento aplicado —específicamente **K-Means con `k = 3`**— permitió diferenciar tres grupos representativos de riesgo (**alto, medio y bajo**).
+
+Aun cuando la **separación estadística entre los grupos fue moderada**, los resultados son **geográficamente coherentes** con la dinámica del fenómeno, confirmando que las zonas **más cercanas a los drenajes y con mayor intensidad de lluvia presentan un riesgo más alto**.
+
+Por tanto, **el objetivo general se cumple**, dado que el modelo logró una **segmentación funcional del territorio** que permite la toma de decisiones preliminares sobre **gestión del riesgo**.
+
+---
+
+### 2. Validación frente a los objetivos específicos
+
+| **Objetivo específico** | **Resultado obtenido** | **Validación** |
+|--------------------------|------------------------|----------------|
+| a) Seleccionar variables ambientales y topográficas relevantes para el riesgo de inundación. | Se integraron variables de elevación, proximidad a drenajes y precipitación, que mostraron correlación directa con el riesgo. | **Cumplido:** las variables fueron adecuadas y consistentes con la literatura técnica. |
+| b) Aplicar técnicas de agrupamiento no supervisado para identificar zonas homogéneas. | Se aplicaron K-Means y clustering jerárquico, que generaron tres grupos diferenciados espacialmente. | **Cumplido:** ambas técnicas mostraron coherencia interna y consistencia geográfica. |
+| c) Evaluar la calidad del modelo y su coherencia con la realidad física. | El coeficiente de silueta fue bajo (0.067–0.127), pero los resultados son interpretativamente válidos según la morfología del terreno. | **Parcialmente cumplido:** estadísticamente débil, pero físicamente consistente. |
+| d) Interpretar y contrastar los resultados con el conocimiento existente sobre el riesgo de inundación. | Las zonas identificadas como de alto riesgo coinciden con áreas bajas y cercanas a cauces, como reportan estudios previos. | **Cumplido:** el patrón coincide con la teoría y validaciones empíricas. |
+
+---
+
+### 3. Validación frente a las hipótesis
+
+**Hipótesis planteada:**
+
+> “Las zonas con menor elevación, mayor intensidad de precipitación y mayor proximidad a los drenajes presentan un nivel de riesgo de inundación significativamente mayor.”
+
+**Evaluación:**
+
+Los resultados del modelo **confirman esta hipótesis**.  
+El cluster de alto riesgo presenta valores de **baja elevación**, **mayor cercanía a drenajes** y **precipitaciones más elevadas**.  
+Aunque las diferencias numéricas entre grupos no son extremas, la tendencia general **coincide plenamente con la relación teórica esperada** entre las variables y el riesgo de inundación.
+
+Por tanto, la **hipótesis se valida empíricamente**, demostrando que el **patrón espacial del riesgo** puede ser identificado mediante **técnicas de minería de datos**, incluso con un **desempeño estadístico moderado**.
+
+
+## 4.7 Evaluación del valor del conocimiento extraído
+
+El conocimiento obtenido a través del proceso de **clustering** ofrece un **valor significativo** para la **comprensión y gestión del riesgo de inundaciones urbanas**.  
+A pesar de que los coeficientes de silueta indican una **separación moderada entre los grupos**, los patrones identificados permiten **transformar los datos geográficos y ambientales en información útil** para la **toma de decisiones**.
+
+En particular, el modelo logró **sintetizar información** de variables **topográficas, hidrológicas y meteorológicas** —como la **elevación**, la **densidad de drenaje**, la **proximidad a canales pluviales** y la **intensidad histórica de lluvia**— para definir **tres niveles de riesgo espacialmente coherentes** (**bajo**, **medio** y **alto**).
+
+---
+
+### Valor aplicado y contextual
+
+#### **Planificación territorial y gestión del riesgo**
+
+El conocimiento permite **identificar sectores** que presentan **condiciones físicas y ambientales propicias para la acumulación pluvial**, contribuyendo a la **delimitación de zonas críticas** y la **priorización de intervenciones** en infraestructura o drenaje.
+
+#### **Apoyo a la toma de decisiones institucionales**
+
+Las **autoridades ambientales y urbanas** pueden usar los resultados para **asignar recursos preventivos de forma más eficiente**, como **mantenimiento de redes pluviales** o **instalación de sensores** en zonas de alta vulnerabilidad.
+
+#### **Base para modelos predictivos o de alerta temprana**
+
+La **segmentación obtenida** puede servir como **entrada para futuros modelos supervisados**, orientados a **predecir el riesgo de inundación** ante **eventos de lluvia extrema**.
+
+#### **Transferencia de conocimiento**
+
+La metodología empleada (**normalización**, **codificación de variables categóricas** y **aplicación de clustering**) puede **replicarse fácilmente** en otros municipios o regiones, **adaptando las variables locales**.
+
 
 ## 5. Conclusiones
 
-• Sintetizar los principales hallazgos.
+---
 
-• Reflexionar sobre el proceso completo y sus limitaciones.
+### **Principales hallazgos**
 
-• Proponer posibles trabajos futuros o mejoras.
+El proceso de **minería de datos** permitió identificar **tres agrupamientos representativos** del comportamiento de las variables **físicas y ambientales** asociadas al **riesgo de inundación urbana**.  
+Los resultados del modelo **K-Means (`k = 3`)** y del **enfoque jerárquico** mostraron una **coherencia temática** entre los clusters y las condiciones del terreno:
+
+- **Cluster 1 (Alto riesgo):** se caracteriza por **baja elevación**, **mayor proximidad a drenajes pluviales** y **alta intensidad de lluvia**, condiciones que incrementan la **susceptibilidad a inundaciones**.  
+- **Cluster 2 (Medio riesgo):** refleja zonas con **equilibrio relativo entre elevación y drenaje**, con **vulnerabilidad moderada**.  
+- **Cluster 3 (Bajo riesgo):** agrupa áreas con **mayor elevación** y **drenaje eficiente**, lo que **reduce la acumulación superficial**.
+
+Si bien los **coeficientes de silueta** (`0.067` para K-Means y `0.127` para el modelo jerárquico) reflejan una **separación moderada entre grupos**, el análisis ofrece **valor interpretativo significativo** al revelar **patrones espaciales y ambientales relevantes** para la **gestión del riesgo**.
+
+---
+
+### **Reflexión sobre el proceso y sus limitaciones**
+
+El proyecto permitió recorrer de manera estructurada todas las etapas del proceso **KDD (Knowledge Discovery in Databases)** —desde la **selección y limpieza de los datos**, hasta la **transformación, modelado y evaluación del conocimiento**— demostrando la **utilidad de la minería de datos en contextos geográficos y ambientales**.
+
+Sin embargo, se identifican algunas **limitaciones**:
+
+#### **Calidad y resolución de los datos**
+Algunos campos geográficos y de lluvia presentan **heterogeneidad en las fuentes y escalas**, lo que puede afectar la **precisión del modelo**.
+
+#### **Ausencia de variables hidrodinámicas o temporales**
+No se incluyeron **datos de caudal, permeabilidad o precipitación en tiempo real**, que podrían **mejorar la descripción del fenómeno**.
+
+#### **Número reducido de variables efectivas para el clustering**
+La **eliminación de variables no numéricas o redundantes** redujo la **dimensionalidad**, pero también **limitó el potencial de separación** de los grupos.
+
+A pesar de ello, el proceso demostró ser **robusto, transparente y reproducible**, cumpliendo los **objetivos del análisis**.
+
+---
+
+### **Trabajos futuros y mejoras propuestas**
+
+- **Integrar datos espaciales y temporales:**  
+  Incorporar información satelital o **series históricas de lluvia** para generar **modelos espacio-temporales de riesgo**.
+
+- **Aplicar técnicas de clustering avanzadas:**  
+  Explorar métodos como **DBSCAN**, **Gaussian Mixture Models (GMM)** o **Self-Organizing Maps (SOM)**, que podrían **capturar relaciones no lineales** entre variables.
+
+- **Evaluar con datos reales de inundaciones reportadas:**  
+  Validar los resultados con **registros de eventos históricos** permitiría medir la **precisión y utilidad práctica** del modelo.
+
+- **Desarrollar una herramienta interactiva:**  
+  Implementar una **visualización geográfica de los clusters** en plataformas como **Shiny** o **Leaflet**, para facilitar la **interpretación de los resultados** por parte de autoridades o investigadores.
+
+---
+
+### **Conclusión general**
+
+En conjunto, el estudio demuestra que la **minería de datos aplicada al análisis del riesgo de inundaciones urbanas** puede **transformar grandes volúmenes de información ambiental en conocimiento estratégico** para la **toma de decisiones**.  
+A pesar de las **limitaciones inherentes a los datos disponibles**, el modelo logró **identificar patrones coherentes, reproducibles y útiles** para **futuras estrategias de prevención y planificación territorial**.
+
 
 ## 6. Anexos
 

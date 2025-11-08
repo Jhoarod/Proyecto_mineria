@@ -1,2 +1,0 @@
-"0","# 2.1 Determinar número óptimo de clusters con el método del codo"
-"0","fviz_nbclust(data_scaled, kmeans, method = ""wss"")"

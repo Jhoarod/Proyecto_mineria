@@ -1,7 +1,0 @@
-"0","# Detección de outliers por Z-score"
-"0","z_scores <- scale(DataLimpia[, sapply(DataLimpia, is.numeric)])"
-"0","outliers <- which(abs(z_scores) > 3, arr.ind = TRUE)"
-"0",""
-"0","# Visualización de posibles outliers"
-"0","boxplot(DataLimpia$historical_rainfall_intensity_mm_hr, main=""Outliers en intensidad de lluvia"")"
-"0",""

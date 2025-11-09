@@ -1,6 +1,6 @@
 ---
-title: "Proyecto_AN"
-author: "Jhoan Rodriguez, Jhonatan Peinado"
+title: "Proyecto Clustering Inundaciones Pluviales"
+author: "Jhoan Sebastian Rodriguez, Jhonatan Peinado, Juan Sebastian Quintero"
 date: "2025-10-31"
 output: pdf_document
 editor_options: 
@@ -231,7 +231,7 @@ DataLimpia <- DataLimpia[DataLimpia$elevation_m >= 0, ]
 ```
 
 Posteriormente, para evitar la distorsión que generan valores extremos
-en la variable historical_rainfall_intensity_mm_hr, se aplicó el método
+en la variable historical_rainfall_intensity_mm_h y storm_drain_proximity se aplicó el método
 de Winsorización, ajustando los valores al percentil 1% y 99%.
 
 ```{r winsorizacion}
@@ -261,7 +261,7 @@ DataLimpia$storm_drain_proximity_winsorizada <- DescTools::Winsorize(
 )
 ```
 
-### tratemiendo de datos:
+### tratamiendo de datos:
 
 • Variables geográficas: (elevation_m, drainage_density_km_per_km2): Se
 mantuvieron sin modificaciones (excepto la corrección de elevaciones
@@ -285,9 +285,11 @@ comportamientos reales y no distorsiones por valores atípicos.
 
 #### 4.4 Transformación de Datos.
 
+
 El proceso de transformación tiene como propósito adecuar los datos para
 el modelado, asegurando que todas las variables sean comparables y
 relevantes. Se realizaron las siguientes etapas:
+
 
 ### Normalización de variables numéricas
 
@@ -300,8 +302,8 @@ clustering, se aplica escalado Min-Max entre 0 y 1.
 DataTransform <- DataLimpia %>%
   mutate(across(c(elevation_m,
                   drainage_density_km_per_km2,
-                  storm_drain_proximity_m,
-                  historical_rainfall_intensity_mm_hr,
+                  storm_drain_proximity_winsorizada,
+                  rainfall_winsorizada,
                   return_period_years),
                 ~ (.-min(.)) / (max(.)-min(.)),
                 .names = "norm_{col}"))
@@ -341,9 +343,9 @@ inundación y agrupamiento de zonas:
 
 DataTransform <- DataTransform %>%
   mutate(
-    elevation_rain_ratio = norm_elevation_m / (norm_historical_rainfall_intensity_mm_hr + 0.001),
-    drainage_rain_index = norm_drainage_density_km_per_km2 * norm_historical_rainfall_intensity_mm_hr,
-    proximity_index = 1 / (norm_storm_drain_proximity_m + 0.01)
+    elevation_rain_ratio = norm_elevation_m / (norm_rainfall_winsorizada + 0.001),
+    drainage_rain_index = norm_drainage_density_km_per_km2 * norm_rainfall_winsorizada,
+    proximity_index = 1 / (norm_storm_drain_proximity_winsorizada + 0.01)
   )
 ```
 
@@ -368,7 +370,7 @@ head(DataTransform %>% select(norm_elevation_m, norm_drainage_density_km_per_km2
 
 ---
 
-### Clustering (para segmentar zonas por riesgo.
+### Clustering (para segmentar zonas por riesgo).
 
 ```{r preparacion-datos-clustering}
 
@@ -376,8 +378,8 @@ data_cluster <- DataTransform %>%
   select(
     norm_elevation_m,
     norm_drainage_density_km_per_km2,
-    norm_storm_drain_proximity_m,
-    norm_historical_rainfall_intensity_mm_hr,
+    norm_storm_drain_proximity_winsorizada,
+    norm_rainfall_winsorizada,
     norm_return_period_years,
     elevation_rain_ratio,
     drainage_rain_index,
@@ -470,7 +472,7 @@ fviz_dend(hc_ward, k = 3,
   theme_minimal()
 ```
 
-```{r hierarchical-validacion}
+```{r hierarchical-validacion }
 # Método de la Silueta para Jerárquico
 p_hc_sil <- fviz_nbclust(data_scaled, 
                          FUN = function(x, k) list(cluster = cutree(hc_ward, k)),
@@ -530,8 +532,8 @@ cluster_stats <- DataTransform %>%
   summarise(
     n = n(),
     elevacion_promedio = mean(norm_elevation_m, na.rm = TRUE),
-    lluvia_promedio = mean(norm_historical_rainfall_intensity_mm_hr, na.rm = TRUE),
-    proximidad_drenaje_promedio = mean(norm_storm_drain_proximity_m, na.rm = TRUE),
+    lluvia_promedio = mean(norm_rainfall_winsorizada, na.rm = TRUE),
+    proximidad_drenaje_promedio = mean(norm_storm_drain_proximity_winsorizada, na.rm = TRUE),
     densidad_drenaje_promedio = mean(norm_drainage_density_km_per_km2, na.rm = TRUE),
     periodo_retorno_promedio = mean(norm_return_period_years, na.rm = TRUE),
     # También las variables derivadas
@@ -609,7 +611,7 @@ print(round(prop.table(table(DataLimpia$risk_level)) * 100, 2))
 
 ```{r viz-distribucion-riesgo}
 # Visualización 1: Distribución de riesgo (Elevación vs Lluvia)
-ggplot(DataLimpia, aes(x = elevation_m, y = historical_rainfall_intensity_mm_hr, 
+ggplot(DataLimpia, aes(x = elevation_m, y = rainfall_winsorizada, 
                               color = risk_level)) +
   geom_point(alpha = 0.6, size = 1.5) +
   scale_color_manual(values = c("Bajo" = "#2ecc71", 
@@ -634,8 +636,8 @@ concentración de puntos correspondientes al clúster de riesgo Alto.
 ```{r viz-boxplots-comparativos}
 # Visualización 2: Boxplots comparativos
 DataLimpia %>%
-  select(risk_level, elevation_m, historical_rainfall_intensity_mm_hr, 
-         drainage_density_km_per_km2, storm_drain_proximity_m) %>%
+  select(risk_level, elevation_m, rainfall_winsorizada, 
+         drainage_density_km_per_km2, storm_drain_proximity_winsorizada) %>%
   pivot_longer(cols = -risk_level, names_to = "variable", values_to = "value") %>%
   ggplot(aes(x = risk_level, y = value, fill = risk_level)) +
   geom_boxplot(alpha = 0.7) +
@@ -690,9 +692,9 @@ stats_finales <- DataLimpia %>%
     porcentaje = round(n() / nrow(DataLimpia) * 100, 2),
     elevacion_media = round(mean(elevation_m, na.rm = TRUE), 2),
     elevacion_sd = round(sd(elevation_m, na.rm = TRUE), 2),
-    lluvia_media = round(mean(historical_rainfall_intensity_mm_hr, na.rm = TRUE), 2),
-    lluvia_sd = round(sd(historical_rainfall_intensity_mm_hr, na.rm = TRUE), 2),
-    proximidad_drenaje_media = round(mean(storm_drain_proximity_m, na.rm = TRUE), 2),
+    lluvia_media = round(mean(rainfall_winsorizada, na.rm = TRUE), 2),
+    lluvia_sd = round(sd(rainfall_winsorizada, na.rm = TRUE), 2),
+    proximidad_drenaje_media = round(mean(storm_drain_proximity_winsorizada, na.rm = TRUE), 2),
     densidad_drenaje_media = round(mean(drainage_density_km_per_km2, na.rm = TRUE), 2),
     .groups = 'drop'
   )
@@ -706,7 +708,7 @@ stats_transform <- DataTransform %>%
   summarise(
     n = n(),
     elevacion_norm_media = round(mean(norm_elevation_m, na.rm = TRUE), 3),
-    lluvia_norm_media = round(mean(norm_historical_rainfall_intensity_mm_hr, na.rm = TRUE), 3),
+    lluvia_norm_media = round(mean(norm_rainfall_winsorizada, na.rm = TRUE), 3),
     elevation_rain_ratio_media = round(mean(elevation_rain_ratio, na.rm = TRUE), 3),
     drainage_rain_index_media = round(mean(drainage_rain_index, na.rm = TRUE), 3),
     proximity_index_media = round(mean(proximity_index, na.rm = TRUE), 3),
@@ -724,7 +726,7 @@ cat("Varianza explicada (BSS/TSS):", round(kmeans_model$betweenss / kmeans_model
 ```{r}
 library(ggplot2)
 
-ggplot(DataLimpia, aes(x = elevation_m, y = historical_rainfall_intensity_mm_hr, color = risk_level)) +
+ggplot(DataLimpia, aes(x = elevation_m, y = rainfall_winsorizada, color = risk_level)) +
   geom_point() +
   labs(title = "Distribución de Riesgo de Inundación por Clúster",
        x = "Elevación (m)",
@@ -741,8 +743,8 @@ DataLimpia %>%
   summarise(
     n = n(),
     elevacion_promedio = round(mean(elevation_m, na.rm = TRUE), 2),
-    lluvia_promedio = round(mean(historical_rainfall_intensity_mm_hr, na.rm = TRUE), 2),
-    proximidad_drenaje = round(mean(storm_drain_proximity_m, na.rm = TRUE), 2),
+    lluvia_promedio = round(mean(rainfall_winsorizada, na.rm = TRUE), 2),
+    proximidad_drenaje = round(mean(storm_drain_proximity_winsorizada, na.rm = TRUE), 2),
     .groups = 'drop'
   ) %>%
   print()
@@ -786,6 +788,7 @@ condiciones más seguras frente a posibles inundaciones.
 
 El análisis de agrupamiento aplicado permitió identificar tres niveles diferenciados de **riesgo de inundación** (bajo, medio y alto) a partir de variables **topográficas, hidrológicas y de uso del suelo**.  
 Las técnicas empleadas —**K-Means (k = 3)** y **clustering jerárquico**— ofrecieron una clasificación preliminar del territorio basada en la similitud entre segmentos urbanos según su **elevación**, **proximidad a drenajes**, **intensidad de lluvia** y **tipo de suelo**.
+
 
 ---
 

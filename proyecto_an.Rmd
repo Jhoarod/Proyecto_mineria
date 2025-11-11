@@ -8,8 +8,8 @@ editor_options:
     wrap: 72
 ---
 
-```{r setup, include=FALSE, echo= FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include=FALSE, echo= FALSE include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ## Libreria utilizadas
@@ -466,13 +466,14 @@ hc_ward <- hclust(dist_matrix, method = "ward.D2")
 ```
 
 ```{r hierarchical-dendrograma}
-# Dendrograma
-fviz_dend(hc_ward, k = 3, 
-          cex = 0.5,
-          palette = "jco",
-          rect = TRUE,
-          main = "Dendrograma - Clustering Jerárquico (Ward)") +
-  theme_minimal()
+suppressWarnings(
+  fviz_dend(hc_ward, k = 3,
+             cex = 0.5,
+             palette = "jco",
+             rect = TRUE,
+             main = "Dendrograma - Clustering Jerárquico (Ward)") +
+    theme_minimal()
+)
 ```
 
 ```{r hierarchical-validacion }

@@ -109,6 +109,9 @@ describir la estructura del terreno y la red de drenaje.
 # Selección de variables relevantes
 DataSeleccion <- Data %>%
   select(
+    city_name,
+    latitude,
+    longitude,
     elevation_m,
     drainage_density_km_per_km2,
     storm_drain_proximity_m,
@@ -770,19 +773,6 @@ El clúster de riesgo Bajo se encuentra mayormente distribuido en zonas
 con elevaciones más altas y menor intensidad de lluvia, lo cual sugiere
 condiciones más seguras frente a posibles inundaciones.
 
-## 4.5 Minería de Datos
-
-• Seleccionar y justificar el algoritmo o técnica empleada
-(clasificación, regresión, clustering, etc.).
-
-• Describir la división de datos (entrenamiento y prueba).
-
-• Presentar las métricas de evaluación (Accuracy, F1-Score, MAE, etc.).
-
-• Incluir visualizaciones que respalden los resultados del modelo.
-
-
-## 4.6 Interpretación y Evaluación
 
 ## 4.6 Interpretación y Evaluación
 
@@ -832,15 +822,6 @@ Esto sugiere que los métodos basados en **distancia euclidiana** (como K-Means)
 Sin embargo, los resultados mantienen **coherencia geográfica y física**: las áreas identificadas como de alto riesgo corresponden a sectores bajos y próximos a drenajes, lo cual valida el modelo desde una **perspectiva interpretativa** más que puramente estadística.
 
 ---
-
-### Recomendaciones y perspectivas
-
-Para fortalecer la robustez del análisis en futuras versiones, se recomienda:
-
-- Incorporar variables adicionales como **pendiente**, **capacidad de infiltración**, **cobertura vegetal** y **densidad de impermeabilización**.  
-- Aumentar la **resolución espacial** del dataset y considerar la **autocorrelación espacial** en los algoritmos.  
-- Evaluar métodos alternativos de agrupamiento como **DBSCAN** o **Gaussian Mixture Models (GMM)**, que pueden capturar estructuras más complejas y no lineales.  
-- Complementar la evaluación con **métricas de validación externa** y **mapas de riesgo verificados** con datos históricos de eventos de inundación.
 
 
 ## Validación del conocimiento descubierto frente a las hipótesis y objetivos planteados
@@ -975,6 +956,52 @@ A pesar de las **limitaciones inherentes a los datos disponibles**, el modelo lo
 
 
 ## 6. Anexos
+### 6.1. Integración de resultados del modelo de clustering
 
-• Gráficos, tablas, fragmentos de código, resultados adicionales que
-complementen el análisis.
+El siguiente fragmento de código integra los resultados del modelo k-means con la base de datos transformada, asociando a cada ciudad el número de cluster asignado.
+Esto permite vincular la información espacial (latitud y longitud) con la clasificación obtenida.
+
+```{r DateGeo}
+DataGeo <- DataTransform %>%
+  mutate(cluster = kmeans_model$cluster) %>%
+  select(city_name, latitude, longitude, cluster)
+```
+
+
+### 6.2. Distribución de clusters por ciudad
+
+A continuación, se muestra la distribución de los clusters en cada ciudad.
+Esta tabla permite observar la proporción de registros asignados a cada grupo, facilitando la comparación entre contextos urbanos.
+
+
+```{r tableDataGeo}
+table(DataGeo$city_name, DataGeo$cluster)
+```
+
+### Interpretación:
+En general, el Cluster 2 concentra la mayor cantidad de registros, lo que sugiere un patrón predominante de riesgo medio o comportamiento común entre la mayoría de las ciudades.
+Los Clusters 1 y 3 aparecen en menor proporción, representando ciudades con condiciones más específicas o divergentes.
+
+### 6.3. Distribución geográfica de los clusters
+
+La siguiente figura muestra la distribución espacial de los clusters en el mapa, a partir de las coordenadas geográficas de cada ciudad.
+
+
+```{r graficaDataGeo}
+ggplot(DataGeo, aes(x = longitude, y = latitude, color = as.factor(cluster))) +
+  geom_point(alpha = 0.7, size = 2) +
+  labs(
+    title = "Distribución geográfica de los clusters de riesgo",
+    x = "Longitud",
+    y = "Latitud",
+    color = "Cluster"
+  ) +
+  theme_minimal()
+```
+
+
+### Interpretación:
+El gráfico evidencia una dispersión amplia de los clusters a lo largo del mapa, sin una concentración clara por región geográfica.
+Esto indica que los factores analizados para el agrupamiento no dependen directamente de la ubicación, sino de características internas de cada ciudad.
+El Cluster 2 (verde) es el más extendido, mientras que los Clusters 1 (rojo) y 3 (azul) se distribuyen en puntos específicos, reflejando patrones de riesgo diferenciados.
+

@@ -12,9 +12,8 @@ editor_options:
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-## Libreria utilizadas
 
-```{r message=FALSE}
+```{r message=FALSE, warning=FALSE}
 library(formattable)
 library(dplyr)
 library(tidyverse)
@@ -168,11 +167,8 @@ nrow(DataLimpia)
 •segment_id: Identificador único, no aporta información para el
 análisis.
 
-•city_name, admin_ward, catchment_id: Identificadores geográficos que no
+•admin_ward, catchment_id: Identificadores geográficos que no
 reflejan condiciones físicas o hidrológicas.
-
-•latitude, longitude: Variables espaciales que requieren proyección o
-normalización especial.
 
 •dem_source, rainfall_source: Describen la procedencia de los datos, no
 influyen directamente en los fenómenos analizados.
@@ -371,6 +367,11 @@ head(DataTransform %>% select(norm_elevation_m, norm_drainage_density_km_per_km2
 
 ```
 
+La comparación entre los datos originales (DataLimpia) y los transformados (DataTransform) muestra que el proceso de normalización y creación de variables derivadas (como elevation_rain_ratio) permitió escalar las variables físicas —elevación y densidad de drenaje— a una misma magnitud, preservando sus relaciones originales.
+
+Se observa que las áreas de menor elevación tienden a presentar mayor densidad de drenaje, lo que sugiere una mayor propensión al riesgo hídrico.
+En conjunto, las transformaciones aplicadas mejoran la comparabilidad entre variables y fortalecen la base analítica del modelo de clustering.
+
 ---
 
 ### Clustering (para segmentar zonas por riesgo).
@@ -525,8 +526,8 @@ DataTransform$Cluster <- as.factor(kmeans_model$cluster)
 DataLimpia$Cluster <- as.factor(kmeans_model$cluster)
 
 # Verificar la asignación
-cat("Clusters asignados correctamente\n")
-print(table(DataTransform$Cluster))
+#cat("Clusters asignados correctamente\n")
+#print(table(DataTransform$Cluster))
 ```
 
 ```{r calcular-estadisticas-cluster}
@@ -547,8 +548,8 @@ cluster_stats <- DataTransform %>%
     .groups = 'drop'
   )
 
-cat("\n========== ESTADÍSTICAS POR CLUSTER ==========\n")
-print(cluster_stats)
+#cat("\n========== ESTADÍSTICAS POR CLUSTER ==========\n")
+#print(cluster_stats)
 ```
 
 ```{r crear-indice-riesgo}
@@ -565,8 +566,8 @@ cluster_stats <- cluster_stats %>%
   ) %>%
   arrange(desc(risk_index))
 
-cat("\n========== ÍNDICE DE RIESGO POR CLUSTER ==========\n")
-print(cluster_stats %>% select(Cluster, risk_index))
+#cat("\n========== ÍNDICE DE RIESGO POR CLUSTER ==========\n")
+#print(cluster_stats %>% select(Cluster, risk_index))
 ```
 
 ```{r asignar-nivel-riesgo}
@@ -580,11 +581,11 @@ cluster_stats <- cluster_stats %>%
     )
   )
 
-cat("\n========== PERFILES DE RIESGO POR CLUSTER ==========\n")
-print(cluster_stats %>% select(Cluster, risk_index, risk_level, 
-                               elevacion_promedio, lluvia_promedio, 
-                               proximidad_drenaje_promedio,
-                               elevation_rain_ratio_promedio))
+#cat("\n========== PERFILES DE RIESGO POR CLUSTER ==========\n")
+#print(cluster_stats %>% select(Cluster, risk_index, risk_level, 
+ #                              elevacion_promedio, lluvia_promedio, 
+  #                             proximidad_drenaje_promedio,
+   #                            elevation_rain_ratio_promedio))
 ```
 
 ```{r mapear-riesgo-dataset}
@@ -599,16 +600,16 @@ DataTransform$risk_level <- factor(DataTransform$risk_level,
 DataLimpia$risk_level <- factor(DataLimpia$risk_level, 
                                 levels = c("Bajo", "Medio", "Alto"))
 
-cat("\n========== MAPEO COMPLETADO ==========\n")
-cat("Niveles de riesgo asignados a DataTransform y DataLimpia\n")
+#cat("\n========== MAPEO COMPLETADO ==========\n")
+#cat("Niveles de riesgo asignados a DataTransform y DataLimpia\n")
 ```
 
 ```{r distribucion-final-riesgo}
 # Distribución final
-cat("\n========== DISTRIBUCIÓN FINAL POR NIVEL DE RIESGO ==========\n")
-print(table(DataLimpia$risk_level))
-cat("\nPorcentajes:\n")
-print(round(prop.table(table(DataLimpia$risk_level)) * 100, 2))
+#cat("\n========== DISTRIBUCIÓN FINAL POR NIVEL DE RIESGO ==========\n")
+#print(table(DataLimpia$risk_level))
+#cat("\nPorcentajes:\n")
+#print(round(prop.table(table(DataLimpia$risk_level)) * 100, 2))
 ```
 
 # VISUALIZACIONES FINALES
@@ -686,7 +687,7 @@ ggplot(DataLimpia, aes(x = risk_level, fill = risk_level)) +
 
 ```{r estadisticas-finales-riesgo}
 # ESTADÍSTICAS FINALES POR NIVEL DE RIESGO
-cat("\n========== ESTADÍSTICAS DESCRIPTIVAS POR NIVEL DE RIESGO ==========\n")
+#cat("\n========== ESTADÍSTICAS DESCRIPTIVAS POR NIVEL DE RIESGO ==========\n")
 
 # Estadísticas usando datos originales de DataLimpia
 stats_finales <- DataLimpia %>%
@@ -703,7 +704,7 @@ stats_finales <- DataLimpia %>%
     .groups = 'drop'
   )
 
-print(stats_finales)
+#print(stats_finales)
 
 # Estadísticas usando variables transformadas de DataTransform
 cat("\n========== ESTADÍSTICAS CON VARIABLES NORMALIZADAS Y DERIVADAS ==========\n")
@@ -719,12 +720,12 @@ stats_transform <- DataTransform %>%
     .groups = 'drop'
   )
 
-print(stats_transform)
+#print(stats_transform)
 
-cat("\n========== ANÁLISIS DE CLUSTERING COMPLETADO ==========\n")
-cat("Método utilizado: K-Means (k=3)\n")
-cat("Coeficiente de Silueta:", round(avg_sil_kmeans, 3), "\n")
-cat("Varianza explicada (BSS/TSS):", round(kmeans_model$betweenss / kmeans_model$totss * 100, 2), "%\n")
+#cat("\n========== ANÁLISIS DE CLUSTERING COMPLETADO ==========\n")
+#cat("Método utilizado: K-Means (k=3)\n")
+#cat("Coeficiente de Silueta:", round(avg_sil_kmeans, 3), "\n")
+#cat("Varianza explicada (BSS/TSS):", round(kmeans_model$betweenss / kmeans_model$totss * 100, 2), "%\n")
 ```
 
 ```{r}
@@ -740,20 +741,20 @@ ggplot(DataLimpia, aes(x = elevation_m, y = rainfall_winsorizada, color = risk_l
 
 ```{r estadisticas-finales}
 # Estadísticas descriptivas por nivel de riesgo
-cat("\n========== ESTADÍSTICAS POR NIVEL DE RIESGO ==========\n")
-DataLimpia %>%
-  filter(risk_level != "Sin clasificar") %>%
-  group_by(risk_level) %>%
-  summarise(
-    n = n(),
-    elevacion_promedio = round(mean(elevation_m, na.rm = TRUE), 2),
-    lluvia_promedio = round(mean(rainfall_winsorizada, na.rm = TRUE), 2),
-    proximidad_drenaje = round(mean(storm_drain_proximity_winsorizada, na.rm = TRUE), 2),
-    .groups = 'drop'
-  ) %>%
-  print()
+#cat("\n========== ESTADÍSTICAS POR NIVEL DE RIESGO ==========\n")
+#DataLimpia %>%
+  #filter(risk_level != "Sin clasificar") %>%
+  #group_by(risk_level) %>%
+  #summarise(
+   # n = n(),
+    #elevacion_promedio = round(mean(elevation_m, na.rm = TRUE), 2),
+    #lluvia_promedio = round(mean(rainfall_winsorizada, na.rm = TRUE), 2),
+    #proximidad_drenaje = round(mean(storm_drain_proximity_winsorizada, na.rm = TRUE), 2),
+    #.groups = 'drop'
+  #) %>%
+  #print()
 
-cat("\n========== ANÁLISIS DE CLUSTERING COMPLETADO ==========\n")
+#cat("\n========== ANÁLISIS DE CLUSTERING COMPLETADO ==========\n")
 ```
 
 \`\`\`

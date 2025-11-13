@@ -109,6 +109,7 @@ describir la estructura del terreno y la red de drenaje.
 DataSeleccion <- Data %>%
   select(
     city_name,
+    admin_ward,
     latitude,
     longitude,
     elevation_m,
@@ -966,7 +967,13 @@ Esto permite vincular la información espacial (latitud y longitud) con la clasi
 ```{r DateGeo}
 DataGeo <- DataTransform %>%
   mutate(cluster = kmeans_model$cluster) %>%
-  select(city_name, latitude, longitude, cluster)
+  select(city_name, admin_ward,latitude, longitude, cluster, risk_level)
+```
+
+
+```{r}
+write.csv(DataGeo, "clusters_ciudades.csv", row.names = FALSE)
+
 ```
 
 
@@ -1006,4 +1013,73 @@ ggplot(DataGeo, aes(x = longitude, y = latitude, color = as.factor(cluster))) +
 El gráfico evidencia una dispersión amplia de los clusters a lo largo del mapa, sin una concentración clara por región geográfica.
 Esto indica que los factores analizados para el agrupamiento no dependen directamente de la ubicación, sino de características internas de cada ciudad.
 El Cluster 2 (verde) es el más extendido, mientras que los Clusters 1 (rojo) y 3 (azul) se distribuyen en puntos específicos, reflejando patrones de riesgo diferenciados.
+
+
+```{r}
+
+# Ejemplo: seleccionar una ciudad por cada nivel de riesgo
+ejemplos_riesgo <- DataGeo %>%
+  group_by(cluster) %>%
+  slice(1) %>%   # toma la primera ciudad de cada cluster
+  ungroup()
+
+bajo_riesgo <- DataGeo %>% filter(cluster == 1) %>% slice(1)
+bajo_riesgo
+
+medio_riesgo <- DataGeo %>% filter(cluster == 2) %>% slice(1)
+medio_riesgo
+
+alto_riesgo <- DataGeo %>% filter(cluster == 3) %>% slice(1)
+alto_riesgo
+
+
+```
+
+
+---
+
+# Interpretación de ubicaciones representativas según nivel de riesgo
+
+## 1. Miami, USA — **Riesgo Alto**
+
+**Ubicación:** District 20
+**Coordenadas:** (25.72738, -80.21539)
+
+### Interpretación
+
+Miami aparece clasificada dentro del *Cluster 1 (riesgo alto)*, lo cual es coherente con su contexto geográfico real.
+La ciudad se encuentra a baja altitud sobre el nivel del mar, con una topografía plana y alta exposición a fenómenos climáticos como huracanes, inundaciones costeras y aumento del nivel del mar.
+Su densidad de drenaje relativamente alta y la vulnerabilidad ante eventos extremos respaldan esta clasificación.
+
+**Conclusión:** Este resultado es realista y consistente con la evidencia climática y ambiental conocida de la región.
+
+---
+
+## 2. Ahmedabad, India — **Riesgo Bajo**
+
+**Ubicación:** Sector 12
+**Coordenadas:** (23.01947, 72.63858)
+
+### Interpretación
+
+Ahmedabad pertenece al *Cluster 2 (riesgo bajo)*, lo cual también tiene sentido geográfico y climático.
+Aunque se encuentra en una zona semiárida, la ciudad tiene una elevación moderada (alrededor de 50–60 m sobre el nivel del mar) y un sistema de drenaje natural relativamente estable, lo que reduce el impacto de inundaciones.
+Su clima seco y la baja densidad hídrica de la cuenca refuerzan esta clasificación.
+
+**Conclusión:** La clasificación como riesgo bajo es razonable, ya que el entorno físico limita la acumulación de agua y la erosión.
+
+---
+
+## 3. Hong Kong, China — **Riesgo Medio**
+
+**Ubicación:** Sector 14
+**Coordenadas:** (22.30260, 114.07867)
+
+### Interpretación
+
+Hong Kong se ubica en el *Cluster 3 (riesgo medio)*.
+La ciudad combina elevaciones variables (montañosas en el interior y planas en la costa), junto con una alta densidad urbana y exposición a lluvias monzónicas intensas.
+Esto genera un riesgo intermedio: mientras algunas zonas cuentan con infraestructura de drenaje avanzada, otras permanecen vulnerables a deslizamientos o inundaciones locales.
+
+**Conclusión:** La clasificación es plausible, reflejando el balance entre buena gestión urbana y exposición climática inherente.
 
